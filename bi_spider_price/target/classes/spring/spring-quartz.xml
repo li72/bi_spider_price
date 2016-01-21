@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">
+	
+	<!-- 检查网络异常URL队列定时器 -->
+	<bean id="checkUrlService" class="com.yiniu.bi.cache.CheckUrlService">
+		<property name="running" value="${check_url_run}" />
+	</bean>
+
+
+	<bean id="checkUrlServiceDetail"
+		class="org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean">
+		<property name="targetObject" ref="checkUrlService" />
+		<property name="targetMethod" value="execute" />
+		<property name="concurrent" value="false" />
+	</bean>
+
+	<bean id="checkUrlServiceDetailTrigger" class="org.springframework.scheduling.quartz.CronTriggerBean">
+		<property name="jobDetail" ref="checkUrlServiceDetail" />
+		<property name="cronExpression">
+			<value>${check_url_time}</value>
+		</property>
+	</bean>
+	<!-- end 检查网络异常URL队列定时器 -->
+
+
+	<!--初始化url队列定时器 -->
+	<bean id="initUrlService" class="com.yiniu.bi.cache.InitUrlService">
+		<property name="running" value="${init_url_run}" />
+	</bean>
+
+	<bean id="initUrlServiceDetail"
+		  class="org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean">
+		<property name="targetObject" ref="initUrlService" />
+		<property name="targetMethod" value="execute" />
+		<property name="concurrent" value="false" />
+	</bean>
+
+	<bean id="initUrlServiceDetailTrigger" class="org.springframework.scheduling.quartz.CronTriggerBean">
+		<property name="jobDetail" ref="initUrlServiceDetail" />
+		<property name="cronExpression">
+			<value>${init_url_time}</value>
+		</property>
+	</bean>
+	<!--end 初始化url队列定时器 -->
+
+	<!--初始化临时url队列定时器 -->
+	<!--<bean id="initTempUrlService" class="com.yiniu.bi.cache.InitTempUrlService">
+		<property name="running" value="${init_temp_url_run}" />
+	</bean>
+
+	<bean id="initTempUrlServiceDetail"
+		  class="org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean">
+		<property name="targetObject" ref="initTempUrlService" />
+		<property name="targetMethod" value="execute" />
+		<property name="concurrent" value="false" />
+	</bean>
+
+	<bean id="initTempUrlServiceDetailTrigger" class="org.springframework.scheduling.quartz.CronTriggerBean">
+		<property name="jobDetail" ref="initTempUrlServiceDetail" />
+		<property name="cronExpression">
+			<value>${init_temp_url_time}</value>
+		</property>
+	</bean>-->
+	<!--end 初始化临时url队列定时器 -->
+
+	<!--mysql批量更新url队列定时器 -->
+	<bean id="mySqlBatchStoreImpl" class="com.yiniu.bi.store.impl.MySqlBatchStoreImpl">
+		<property name="running" value="${mysql_save_batch_run}" />
+	</bean>
+
+	<bean id="mySqlBatchStoreImplDetail"
+		  class="org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean">
+		<property name="targetObject" ref="mySqlBatchStoreImpl" />
+		<property name="targetMethod" value="scanSaveBatch" />
+		<property name="concurrent" value="false" />
+	</bean>
+
+	<bean id="mySqlBatchStoreImplDetailTrigger" class="org.springframework.scheduling.quartz.CronTriggerBean">
+		<property name="jobDetail" ref="mySqlBatchStoreImplDetail" />
+		<property name="cronExpression">
+			<value>${mysql_save_batch_time}</value>
+		</property>
+	</bean>
+	<!--end mysql批量更新url队列定时器 -->
+
+
+	<!-- quartz的调度工厂 调度工厂只能有一个，多个调度任务在list中添加 -->
+	<bean class="org.springframework.scheduling.quartz.SchedulerFactoryBean">
+		<property name="triggers">
+			<list>
+				<ref local="checkUrlServiceDetailTrigger" />
+				<ref local="initUrlServiceDetailTrigger" />
+				<ref local="mySqlBatchStoreImplDetailTrigger" />
+			</list>
+		</property>
+	</bean>
+
+</beans>

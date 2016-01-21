@@ -1,0 +1,136 @@
+package com.yiniu.bi.cache;
+
+
+import com.yiniu.bi.dao.IBaseDao;
+import com.yiniu.bi.main.MainTempStart;
+import com.yiniu.bi.model.UrlSource;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.BeanPropertyRowMapper;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
+
+/**
+ * //                       _oo0oo_
+ * //                      o8888888o
+ * //                      88" . "88
+ * //                      (| -_- |)
+ * //                      0\  =  /0
+ * //                    ___/`---'\___
+ * //                  .' \\|     |// '.
+ * //                 / \\|||  :  |||// \
+ * //                / _||||| -:- |||||- \
+ * //               |   | \\\  -  /// |   |
+ * //               | \_|  ''\---/''  |_/ |
+ * //               \  .-\__  '-'  ___/-. /
+ * //             ___'. .'  /--.--\  `. .'___
+ * //          ."" '<  `.___\_<|>_/___.' >' "".
+ * //         | | :  `- \`.;`\ _ /`;.`/ - ` : | |
+ * //         \  \ `_.   \_ __\ /__ _/   .-` /  /
+ * //     =====`-.____`.___ \_____/___.-`___.-'=====
+ * //                       `=---='
+ * //
+ * //
+ * //     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * //
+ * //               佛祖保佑         永无BUG
+ * //
+ *
+ * @author Michael Kong
+ * @date 2015/12/24
+ */
+@Service("initTempUrlService")
+public class InitTempUrlService {
+
+    private Logger LOGGER = LoggerFactory
+            .getLogger(InitTempUrlService.class);
+
+    @Autowired
+    private IBaseDao baseDao;
+
+    private final SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+
+    /**
+     * false：表示不运行，true：表示运行
+     */
+    public boolean running = false;
+
+    public boolean isRunning() {
+        return running;
+    }
+
+    public void setRunning(boolean running) {
+        this.running = running;
+    }
+
+    public void execute() {
+        LOGGER.info("initTempUrlService---start" + new Date());
+        if (running) {
+            try {
+                initUrl();
+            } catch (Exception e) {
+                LOGGER.error("initTempUrlService---error" + new Date(), e);
+            }
+        }
+        LOGGER.info("initTempUrlService---end" + new Date());
+    }
+
+    /*public void initUrl() {
+        String querySql = getQuerySql();
+        JdbcTemplate template = baseDao.getTemplate();
+        List<UrlSource> queryList = template.query(querySql,
+                BeanPropertyRowMapper.newInstance(UrlSource.class));
+        initResource(queryList);
+    }
+*/
+    private String getQuerySql() {
+        String sql1 = "SELECT ta.code,ta.yhdUrl,ta.tmUrl FROM ( SELECT t.goodsCode code,t.goodsLinkForOne yhdUrl,t.goodsLinkForTmall tmUrl FROM bi_goods_url_manage t WHERE t.goodsLinkForOne NOT LIKE '%search%' GROUP BY t.goodsCode) ta ";
+        String sql2 = " LEFT JOIN ( SELECT t.code FROM bi_spider t WHERE t.date = '???' ) tb ON (ta.code = tb.code) WHERE tb.code IS NULL";
+
+        Date today = new Date();
+        String todayStr = format.format(today);
+
+        String querySql = sql1 + sql2;
+        return querySql.replace("???", todayStr);
+    }
+
+    public void initUrl() {
+        String sql = "SELECT t.goodsCode CODE,t.goodsLinkForOne yhdUrl FROM bi_goods_url_temp t WHERE t.goodsLinkForOne NOT LIKE '%search%' GROUP BY t.goodsCode";
+        JdbcTemplate template = baseDao.getTemplate();
+        List<UrlSource> queryList = template.query(sql,
+                BeanPropertyRowMapper.newInstance(UrlSource.class));
+        initResource(queryList);
+    }
+
+    /*public void initUrl() {
+        String sql = "SELECT t.goodsCode CODE,t.goodsLink url,'yhd' type FROM bi_goods_url_manage2 t WHERE t.goodsLink NOT LIKE '%search%' GROUP BY t.goodsCode";
+        JdbcTemplate template = baseDao.getTemplate();
+        List<UrlSource> list = template.query(sql,
+                BeanPropertyRowMapper.newInstance(UrlSource.class));
+        for (UrlSource urlSource : list) {
+            MainStart.SOURCE_QUEUE.offer(urlSource);
+        }
+    }*/
+
+    private void initResource(List<UrlSource> queryList) {
+        Date date = new Date();
+        String dateString = format.format(date);
+        for (UrlSource urlSource : queryList) {
+            String yhdUrl = urlSource.getYhdUrl();
+            if (StringUtils.isNotBlank(yhdUrl)) {
+                UrlSource yhd = new UrlSource();
+                yhd.setUrl(yhdUrl);
+                yhd.setType("yhd");
+                yhd.setDate(dateString);
+                yhd.setCode(urlSource.getCode());
+                MainTempStart.SOURCE_QUEUE_TEMP.offer(yhd);
+            }
+        }
+    }
+}

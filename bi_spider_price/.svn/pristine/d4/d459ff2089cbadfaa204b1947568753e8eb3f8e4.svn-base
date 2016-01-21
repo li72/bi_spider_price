@@ -1,0 +1,229 @@
+package com.yiniu.bi.process.impl;
+
+import com.alibaba.fastjson.JSONObject;
+import com.gargoylesoftware.htmlunit.WebClient;
+import com.yiniu.bi.main.MainStart;
+import com.yiniu.bi.model.ProxyInfo;
+import com.yiniu.bi.model.Result;
+import com.yiniu.bi.model.UrlSource;
+import com.yiniu.bi.process.IProcessService;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.http.HttpEntity;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.conn.ConnectTimeoutException;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
+import org.htmlcleaner.HtmlCleaner;
+import org.htmlcleaner.TagNode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+
+/**
+ * //                       _oo0oo_
+ * //                      o8888888o
+ * //                      88" . "88
+ * //                      (| -_- |)
+ * //                      0\  =  /0
+ * //                    ___/`---'\___
+ * //                  .' \\|     |// '.
+ * //                 / \\|||  :  |||// \
+ * //                / _||||| -:- |||||- \
+ * //               |   | \\\  -  /// |   |
+ * //               | \_|  ''\---/''  |_/ |
+ * //               \  .-\__  '-'  ___/-. /
+ * //             ___'. .'  /--.--\  `. .'___
+ * //          ."" '<  `.___\_<|>_/___.' >' "".
+ * //         | | :  `- \`.;`\ _ /`;.`/ - ` : | |
+ * //         \  \ `_.   \_ __\ /__ _/   .-` /  /
+ * //     =====`-.____`.___ \_____/___.-`___.-'=====
+ * //                       `=---='
+ * //
+ * //
+ * //     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * //
+ * //               佛祖保佑         永无BUG
+ * //
+ *
+ * @author Michael Kong
+ * @date 2015/12/24
+ */
+@Service("yhdTempProcess")
+public class YHDTempProcessImpl implements IProcessService {
+
+    private static Logger LOGGER = LoggerFactory
+            .getLogger(YHDTempProcessImpl.class);
+
+    public static final String YHD_PRICE_PRE = "http://gps.yhd.com/restful/detail?mcsite=1&provinceId=20&pmId=";
+    public static final String YHD_PRICE_END = "&callback=jQuery111306277138183359057_1450844554317&_=1450844554318";
+    public static final String YHD_PROM_PRICE_PRE = "http://gps.yhd.com/restful/promotion?callback=jQuery1113014867033367045224_1451029683228&pmId=";
+    public static final String YHD_PROM_PRICE_END = "&promId=1245183&provinceId=20&channelId=1&_=1451029683252";
+    public static final String YHD_NAME_XPATH = "//*[@id=\"productMainName\"]";
+
+    @Override
+    public Result process(WebClient webClient, UrlSource source) throws Exception {
+        return null;
+    }
+
+    @Override
+    public Result process(UrlSource source, ProxyInfo proxyInfo) throws Exception {
+        long start = System.currentTimeMillis();
+
+        String url = source.getUrl();
+        if (StringUtils.isBlank(url)) {
+            return null;
+        }
+
+        url = url.replaceAll("`", "");
+        url = url.replaceAll("\\^", "");
+
+        String hederKey = "user-agent";
+        String headerBrowserVal = MainStart.getBrowser();
+
+        HttpClientBuilder build = HttpClients.custom();
+        CloseableHttpClient client = build.build();
+        HttpGet httpGet = new HttpGet(url);
+        httpGet.setHeader(hederKey, headerBrowserVal);
+        httpGet.setHeader("cookie", "provinceId=20");
+        CloseableHttpResponse response = client.execute(httpGet);
+        HttpEntity entity = response.getEntity();
+
+        System.out.println(url);
+
+        /*HttpClientBuilder build = HttpClients.custom();
+        HttpHost proxy = new HttpHost("202.106.16.36", 3128);
+        HttpRequestRetryHandler retryHandler = new DefaultHttpRequestRetryHandler();
+        CloseableHttpClient client = build.setRetryHandler(retryHandler).setProxy(proxy).build();
+        HttpGet httpGet = new HttpGet(url);
+        CloseableHttpResponse response = client.execute(httpGet);
+        HttpEntity entity = response.getEntity();*/
+
+        String htmlContent = EntityUtils.toString(entity);
+
+        // 获取名称
+        String name = null;
+        try {
+            name = parseProductName(htmlContent);
+        } catch (Exception e) {
+            if (e instanceof ConnectTimeoutException) {
+                // 访问过于频繁被封
+                LOGGER.error("访问一号店URL过于频繁，URL=" + url, e);
+                throw e;
+            } else {
+                LOGGER.error("解析一号店产品名称出错，URL=" + url, e);
+                name = "获取名称失败";
+            }
+        }
+
+        String itemCode = null;
+        try {
+            itemCode = getItemCode(htmlContent);
+        } catch (Exception e) {
+            LOGGER.error("解析一号店itemId出错，URL=" + url, e);
+            throw e;
+        }
+
+        // 获取销售价
+        String priceAjaxUrl = YHD_PRICE_PRE + itemCode + YHD_PRICE_END;
+        System.out.println(priceAjaxUrl);
+
+        httpGet = new HttpGet(priceAjaxUrl);
+        httpGet.setHeader(hederKey, headerBrowserVal);
+        httpGet.setHeader("cookie", "provinceId=20");
+        response = client.execute(httpGet);
+        entity = response.getEntity();
+        String price = null;
+        String priceJsonContent = EntityUtils.toString(entity);
+
+        try {
+            JSONObject jsonObject = (JSONObject) JSONObject.parse(formatStr(priceJsonContent));
+            price = new String(jsonObject.get("currentPrice").toString());
+        } catch (Exception e) {
+            LOGGER.error("解析一号店价格信息出错，URL=" + priceAjaxUrl, e);
+        }
+
+        // 获取促销价
+        String promPriceAjaxUrl = YHD_PROM_PRICE_PRE + itemCode + YHD_PROM_PRICE_END;
+        System.out.println(promPriceAjaxUrl);
+        httpGet = new HttpGet(promPriceAjaxUrl);
+        httpGet.setHeader(hederKey, headerBrowserVal);
+        httpGet.setHeader("cookie", "provinceId=20");
+        response = client.execute(httpGet);
+        entity = response.getEntity();
+        String promPriceJsonContent = EntityUtils.toString(entity);
+        String promPrice = null;
+        try {
+            Object jsonObject = JSONObject.parse(formatStr(promPriceJsonContent));
+            if (jsonObject != null) {
+                Object promPriceStr = ((JSONObject) jsonObject).get("promPrice");
+                if (promPriceStr != null) {
+                    promPrice = new String(promPriceStr.toString());
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.error("解析一号店促销价格信息出错，URL=" + promPriceAjaxUrl, e);
+        }
+
+
+        Result result = new Result();
+        try {
+            if (StringUtils.isNoneBlank(price)) {
+                result.setPrice(Double.parseDouble(price));
+            }
+            if (StringUtils.isNoneBlank(promPrice)) {
+                result.setPromPrice(Double.parseDouble(promPrice));
+            }
+        } catch (Exception e) {
+            LOGGER.error("转换一号店价格信息出错，价格字符串=" + price, e);
+        }
+
+        result.setName(name);
+        result.setUseTime((System.currentTimeMillis() - start));
+        source.setResult(result);
+
+        return result;
+    }
+
+    private String formatStr(String str) {
+        int beginIndex = str.indexOf("(");
+        String preFormat = str.substring(beginIndex + 1);
+        return preFormat.substring(0, preFormat.length() - 1);
+    }
+
+    private String getItemCode(String content) {
+        int preIndex = content.indexOf("content=\"YHD_DETAIL.");
+        String newTest = content.substring(preIndex + 20);
+        int endIndex = newTest.indexOf("\"");
+        return newTest.substring(0, endIndex);
+    }
+
+    private String parseProductName(String content) {
+        try {
+            int preIndex = content.indexOf("<meta name=\"Keywords\" content=\"");
+            if (preIndex == -1) {
+                return "获取名称失败";
+            }
+            String newText = content.substring(preIndex + 31);
+            int endIndex = newText.indexOf("\">");
+            return newText.substring(0, endIndex);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "获取名称失败";
+        }
+    }
+
+    private String parseProductNameWithCleaner(String content) throws Exception {
+        if (content.contains("过于频繁")) {
+            // 访问过于频繁被封
+            throw new ConnectTimeoutException();
+        }
+        HtmlCleaner htmlCleaner = new HtmlCleaner();
+        TagNode rootNode = htmlCleaner.clean(content);
+        Object[] objects = rootNode.evaluateXPath(YHD_NAME_XPATH);
+        TagNode nameNode = (TagNode) objects[0];
+        return nameNode.getText().toString();
+    }
+}

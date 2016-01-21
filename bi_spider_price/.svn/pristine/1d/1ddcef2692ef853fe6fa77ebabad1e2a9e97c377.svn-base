@@ -1,0 +1,12 @@
+#MySQL \u7684\u914d\u7f6e
+hibernate.dialect=org.hibernate.dialect.MySQLDialect
+driverClassName=com.mysql.jdbc.Driver
+validationQuery=SELECT 1
+jdbc_url=jdbc:mysql://10.17.174.186:3306/bi?useUnicode=true&characterEncoding=utf-8
+jdbc_username=xqkdBackupDB
+jdbc_password=backupDBpw
+
+uploadFieldName=filedata
+uploadFileMaxSize=20971520
+uploadFileExts=txt,rar,zip,doc,docx,xls,xlsx,jpg,jpeg,gif,png,swf,wmv,avi,wma,mp3,mid
+uploadDirectory=attached

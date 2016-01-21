@@ -1,0 +1,8 @@
+check_url_run = true
+check_url_time = 0 0/10 * * * ?
+
+init_url_run = true
+init_url_time = 0 5 9 * * ?
+
+init_temp_url_run = true
+init_temp_url_time = 0 30 8,12,17 * * ?
