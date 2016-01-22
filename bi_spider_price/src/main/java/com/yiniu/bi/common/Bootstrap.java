@@ -24,11 +24,11 @@ public class Bootstrap {
 		THREAD_POOL.execute(yhdService2) ;*/
 		/*TmallServiceImpl  tmallService2 =(TmallServiceImpl)applicationContext.getBean("tmallProcess") ;
 		tmallService2.init() ;
-		THREAD_POOL.execute(tmallService2) ;*/
+		THREAD_POOL.execute(tmallService2) ;*/   
 		
 		JDServiceImpl  jdService2 =(JDServiceImpl)applicationContext.getBean("jdProcess") ;
 		jdService2.init() ;
-		THREAD_POOL.execute(jdService2) ;
+		THREAD_POOL.execute(jdService2) ;    // kkk
 		
 		System.out.println(" init  finsh ");
 		
