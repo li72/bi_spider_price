@@ -4,7 +4,7 @@
 	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">
 	
 	<!-- 检查网络异常URL队列定时器 -->
-	<bean id="checkUrlService" class="com.yiniu.bi.cache.CheckUrlService">
+	<bean id="checkUrlService" class="com.li72.bi.task.CheckUrlService">
 		<property name="running" value="${check_url_run}" />
 	</bean>
 
@@ -26,7 +26,7 @@
 
 
 	<!--初始化url队列定时器 -->
-	<bean id="initUrlService" class="com.yiniu.bi.cache.InitUrlService">
+	<bean id="initUrlService" class="com.li72.bi.task.InitUrlService">
 		<property name="running" value="${init_url_run}" />
 	</bean>
 
@@ -46,7 +46,7 @@
 	<!--end 初始化url队列定时器 -->
 
 	<!--初始化临时url队列定时器 -->
-	<!--<bean id="initTempUrlService" class="com.yiniu.bi.cache.InitTempUrlService">
+	<!--<bean id="initTempUrlService" class="com.li72.bi.task.InitTempUrlService">
 		<property name="running" value="${init_temp_url_run}" />
 	</bean>
 
@@ -66,7 +66,7 @@
 	<!--end 初始化临时url队列定时器 -->
 
 	<!--mysql批量更新url队列定时器 -->
-	<bean id="mySqlBatchStoreImpl" class="com.yiniu.bi.store.impl.MySqlBatchStoreImpl">
+	<bean id="mySqlBatchStoreImpl" class="com.li72.bi.service.impl.MySqlBatchStoreImpl">
 		<property name="running" value="${mysql_save_batch_run}" />
 	</bean>
 
