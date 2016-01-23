@@ -45,25 +45,6 @@
 	</bean>
 	<!--end 初始化url队列定时器 -->
 
-	<!--初始化临时url队列定时器 -->
-	<!--<bean id="initTempUrlService" class="com.li72.bi.task.InitTempUrlService">
-		<property name="running" value="${init_temp_url_run}" />
-	</bean>
-
-	<bean id="initTempUrlServiceDetail"
-		  class="org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean">
-		<property name="targetObject" ref="initTempUrlService" />
-		<property name="targetMethod" value="execute" />
-		<property name="concurrent" value="false" />
-	</bean>
-
-	<bean id="initTempUrlServiceDetailTrigger" class="org.springframework.scheduling.quartz.CronTriggerBean">
-		<property name="jobDetail" ref="initTempUrlServiceDetail" />
-		<property name="cronExpression">
-			<value>${init_temp_url_time}</value>
-		</property>
-	</bean>-->
-	<!--end 初始化临时url队列定时器 -->
 
 	<!--mysql批量更新url队列定时器 -->
 	<bean id="mySqlBatchStoreImpl" class="com.li72.bi.service.impl.MySqlBatchStoreImpl">
